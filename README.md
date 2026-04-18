@@ -207,8 +207,8 @@ pytest tests/ -v                                            # run tests / 运行
 
 | Flag | Default | Description / 说明 |
 |------|---------|---|
-| `--buy`      | `1.04`    | Bull zone threshold / 牛市阈值 |
-| `--sell`     | `0.97`    | Bear zone threshold / 熊市阈值 |
+| `--buy`      | `1.03`    | Bull zone threshold / 牛市阈值 |
+| `--sell`     | `0.83`    | Bear zone threshold / 熊市阈值 |
 | `--ma`       | `200`     | SMA period (days) / 均线周期 |
 | `--tranches` | `5`       | DCA tranches: 1=all-in, N=1/N equity / 分批数量 |
 | `--dip`      | `-0.01`   | Min QQQ daily return for entry / 入场回调幅度 |
