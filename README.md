@@ -163,8 +163,14 @@ quant_backtest/
 │   └── cache/              # Auto-generated, git-ignored / 自动生成
 ├── backtest/
 │   └── run.py              # CLI + multi-period tables + 5 charts + results.md
-├── reports/                # Generated outputs / 生成结果
-│   ├── results.md          # Full report with all tables
+├── reports/
+├── tranches_1/      ← 全仓版
+│   ├── results.md
+│   └── *.png
+├── tranches_3/      ← 3批版
+│   ├── results.md
+│   └── *.png
+├── results.md       ← 默认5批版
 │   ├── 1_nav_comparison.png
 │   ├── 2_drawdowns.png
 │   ├── 3_annual_returns.png
