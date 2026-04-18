@@ -154,34 +154,35 @@ Full detailed charts are in the [`reports/`](reports/) folder and auto-updated w
 ## Project Structure / 项目结构
 
 ```
-quant_backtest/
-├── strategies/
-│   └── engine.py           # All 5 strategies + synthesis + metrics
-│                           # 五种策略核心逻辑、合成数据、指标计算
-├── data/
+## 📂 项目结构 (Project Structure)
+
+```text
+Quant-QQQ-QLD-TQQQ/
+├── strategies/             
+│   └── engine.py           # 5 strategies + synthesis + metrics / 5种策略逻辑与指标
+├── data/                  
 │   ├── downloader.py       # yfinance + Parquet cache / 下载器与缓存
-│   └── cache/              # Auto-generated, git-ignored / 自动生成
-├── backtest/
-│   └── run.py              # CLI + multi-period tables + 5 charts + results.md
-├── reports/
-├── tranches_1/      ← 全仓版
-│   ├── results.md
-│   └── *.png
-├── tranches_3/      ← 3批版
-│   ├── results.md
-│   └── *.png
-├── results.md       ← 默认5批版
-│   ├── 1_nav_comparison.png
-│   ├── 2_drawdowns.png
-│   ├── 3_annual_returns.png
-│   ├── 4_cagr_by_period.png
-│   └── 5_sharpe_by_period.png
-├── tests/
-│   └── test_strategies.py
-├── .github/workflows/ci.yml
-├── requirements.txt
-├── pyproject.toml
-└── .gitignore
+│   └── cache/              # Auto-generated (Git ignored) / 自动生成的本地数据
+├── backtest/               
+│   ├── run.py              # Main entry + CLI / 主运行入口
+│   └── optimize.py         # Parameter optimization / 参数优化
+├── reports/                # 回测结果展示 (Default: 5 Tranches / 默认5批版)
+│   ├── results.md          
+│   ├── *.png               # NAV, DD, Returns charts / 净值、回撤、收益图表
+│   ├── tranches_1/         # All-in version / 全仓版结果
+│   │   ├── results.md
+│   │   └── *.png
+│   └── tranches_3/         # 3 Tranches version / 3批版结果
+│       ├── results.md
+│       └── *.png
+├── tests/                  # Unit tests / 单元测试
+│   └── test_strategies.py  # Logic verification / 逻辑验证
+├── utils/                  # Utility functions / 工具类函数
+├── .github/workflows/      # CI/CD
+│   └── ci.yml              # Auto backtest workflow / 自动化回测流水线
+├── requirements.txt        # Dependencies / 依赖包列表
+├── pyproject.toml          # Project metadata / 项目配置文件
+└── README.md               # Project documentation / 项目说明文档
 ```
 
 ---
@@ -212,6 +213,7 @@ pytest tests/ -v                                            # run tests / 运行
 | `--refresh`  | `False`   | Force re-download data / 强制重新下载 |
 
 ---
+
 
 ## Credits / 致谢
 
