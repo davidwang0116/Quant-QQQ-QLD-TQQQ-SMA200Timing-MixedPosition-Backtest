@@ -1,16 +1,23 @@
 """
 Strategy Engine
 ===============
-Five strategies, all sharing the same MA200 signal logic and DCA parameters.
+Five strategies per market, all sharing the same MA signal logic and DCA parameters.
 
-Strategy 1 — BuyHoldQQQ       : 100% QQQ, buy and hold, no timing
-Strategy 2 — TimingQQQ        : QQQ, MA200 timing + dip DCA entry
-Strategy 3 — TimingQLD        : QLD (2x), MA200 timing + dip DCA entry
-Strategy 4 — TimingTQQQ       : TQQQ (3x), MA200 timing + dip DCA entry
-Strategy 5 — Combo            : 60% QQQ buy-hold + 30% QLD timing + 10% TQQQ timing
-                                 (allocations rebalance dynamically within each period)
+QQQ Market:
+  Strategy 1 — BuyHoldQQQ       : 100% QQQ, buy and hold, no timing
+  Strategy 2 — TimingQQQ        : QQQ, MA timing + dip DCA entry
+  Strategy 3 — TimingQLD        : QLD (2x), MA timing + dip DCA entry
+  Strategy 4 — TimingTQQQ       : TQQQ (3x), MA timing + dip DCA entry
+  Strategy 5 — Combo            : 60% QQQ buy-hold + 30% QLD timing + 10% TQQQ timing
 
-Signal source for strategies 2-5: QQQ MA200
+SPY Market:
+  Strategy 1 — BuyHoldSPY       : 100% SPY, buy and hold, no timing
+  Strategy 2 — TimingSPY        : SPY, MA timing + dip DCA entry
+  Strategy 3 — TimingSSO        : SSO (2x), MA timing + dip DCA entry
+  Strategy 4 — TimingUPRO       : UPRO (3x), MA timing + dip DCA entry
+  Strategy 5 — ComboSPY         : 60% SPY buy-hold + 30% SSO timing + 10% UPRO timing
+
+Each market uses its own MA as signal source (QQQ MA or SPY MA).
 """
 
 from __future__ import annotations
@@ -208,21 +215,25 @@ def _ma200_signals(qqq: pd.Series, cfg: StrategyConfig) -> tuple[pd.Series, pd.S
 # ─────────────────────────────────────────────────────────────────
 
 def _run_timing_dca(
-    name:      str,
-    ticker:    str,
-    qqq:       pd.Series,
-    asset:     pd.Series,
-    cfg:       StrategyConfig,
-    capital:   float,
+    name:           str,
+    ticker:         str,
+    qqq:            pd.Series,
+    asset:          pd.Series,
+    cfg:            StrategyConfig,
+    capital:        float,
+    signal_source:  pd.Series | None = None,
 ) -> StrategyResult:
     """
-    MA200 timing + dip DCA entry for any asset.
+    MA timing + dip DCA entry for any asset.
+    signal_source: the price series used for MA calculation (defaults to `qqq`).
     Returns StrategyResult with portfolio NAV starting at `capital`.
     """
-    common    = qqq.index.intersection(asset.index)
-    qqq       = qqq.loc[common]
+    if signal_source is None:
+        signal_source = qqq
+    common    = signal_source.index.intersection(asset.index)
+    signal_source = signal_source.loc[common]
     asset     = asset.loc[common]
-    ma200, sell_flag, qqq_ret = _ma200_signals(qqq, cfg)
+    ma200, sell_flag, sig_ret = _ma200_signals(signal_source, cfg)
 
     cash          = capital
     shares        = 0.0
@@ -233,9 +244,9 @@ def _run_timing_dca(
 
     for date in common:
         price = asset.loc[date]
-        qp    = qqq.loc[date]
+        sp    = signal_source.loc[date]
         ma    = ma200.loc[date]
-        ret   = qqq_ret.loc[date]
+        ret   = sig_ret.loc[date]
         pv    = cash + shares * price
 
         # EXIT
@@ -248,7 +259,7 @@ def _run_timing_dca(
                 date=date, action="SELL", ticker=ticker,
                 price=price, shares=shares, value=proceeds,
                 cash_after=cash, portfolio_value=pv,
-                reason=f"BEAR: QQQ {qp:.2f} < MA200 {ma:.2f}×{cfg.sell_threshold}",
+                reason=f"BEAR: {sp:.2f} < MA{cfg.ma_period} {ma:.2f}×{cfg.sell_threshold}",
                 tranche=0,
             ))
             shares        = 0.0
@@ -257,7 +268,7 @@ def _run_timing_dca(
         # ENTRY
         elif (
             pd.notna(ma)
-            and qp > ma * cfg.buy_threshold
+            and sp > ma * cfg.buy_threshold
             and pd.notna(ret)
             and ret <= cfg.dip_threshold
             and tranches_held < cfg.max_tranches
@@ -281,7 +292,7 @@ def _run_timing_dca(
                 cash_after=cash, portfolio_value=pv,
                 reason=(
                     f"DIP BUY {tranches_held}/{cfg.max_tranches}: "
-                    f"QQQ {qp:.2f}>MA200 {ma:.2f}×{cfg.buy_threshold} "
+                    f"{sp:.2f}>MA{cfg.ma_period} {ma:.2f}×{cfg.buy_threshold} "
                     f"ret {ret*100:.2f}%"
                 ),
                 tranche=tranches_held,
@@ -398,6 +409,115 @@ def strategy_combo(
 
     return StrategyResult(
         name="Combo 60/30/10",
+        nav=combo_nav,
+        signals=combo_sig,
+        trades=all_trades,
+        config=cfg,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────
+#  SPY market strategy runners
+# ─────────────────────────────────────────────────────────────────
+
+def strategy_buyhold_spy(
+    spy: pd.Series,
+    cfg: StrategyConfig,
+) -> StrategyResult:
+    """Strategy 1 (SPY): 100% SPY buy and hold."""
+    capital = cfg.initial_capital
+    shares  = capital / spy.iloc[0]
+    nav     = (shares * spy).rename("BuyHold SPY")
+    sig     = pd.Series(1, index=spy.index, name="signal")
+    return StrategyResult(
+        name="BuyHold SPY", nav=nav, signals=sig, trades=[], config=cfg
+    )
+
+
+def strategy_timing_spy(
+    spy: pd.Series,
+    cfg: StrategyConfig,
+) -> StrategyResult:
+    """Strategy 2 (SPY): SPY with own MA timing + dip DCA."""
+    return _run_timing_dca(
+        name="Timing SPY", ticker="SPY",
+        qqq=spy, asset=spy, cfg=cfg, capital=cfg.initial_capital,
+        signal_source=spy,
+    )
+
+
+def strategy_timing_sso(
+    spy: pd.Series,
+    sso: pd.Series,
+    cfg: StrategyConfig,
+) -> StrategyResult:
+    """Strategy 3 (SPY): SSO (2x) with SPY MA timing + dip DCA."""
+    return _run_timing_dca(
+        name="Timing SSO", ticker="SSO",
+        qqq=spy, asset=sso, cfg=cfg, capital=cfg.initial_capital,
+        signal_source=spy,
+    )
+
+
+def strategy_timing_upro(
+    spy:  pd.Series,
+    upro: pd.Series,
+    cfg:  StrategyConfig,
+) -> StrategyResult:
+    """Strategy 4 (SPY): UPRO (3x) with SPY MA timing + dip DCA."""
+    return _run_timing_dca(
+        name="Timing UPRO", ticker="UPRO",
+        qqq=spy, asset=upro, cfg=cfg, capital=cfg.initial_capital,
+        signal_source=spy,
+    )
+
+
+def strategy_combo_spy(
+    spy:  pd.Series,
+    sso:  pd.Series,
+    upro: pd.Series,
+    cfg:  StrategyConfig,
+) -> StrategyResult:
+    """
+    Strategy 5 (SPY): Combo portfolio.
+      60% SPY buy-hold  (cfg.combo_bh_pct)
+      30% SSO timing    (cfg.combo_sso_pct)
+      10% UPRO timing   (cfg.combo_upro_pct)
+    """
+    capital     = cfg.initial_capital
+    cap_bh      = capital * cfg.combo_bh_pct
+    cap_sso     = capital * cfg.combo_qld_pct    # reuse qld slot for 2x
+    cap_upro    = capital * cfg.combo_tqqq_pct   # reuse tqqq slot for 3x
+
+    bh_cfg      = StrategyConfig(**{**cfg.__dict__, "initial_capital": cap_bh})
+    sso_cfg     = StrategyConfig(**{**cfg.__dict__, "initial_capital": cap_sso})
+    upro_cfg    = StrategyConfig(**{**cfg.__dict__, "initial_capital": cap_upro})
+
+    bh_res      = strategy_buyhold_spy(spy, bh_cfg)
+    sso_res     = _run_timing_dca("SSO-leg",  "SSO",  spy, sso,  sso_cfg,  cap_sso,  signal_source=spy)
+    upro_res    = _run_timing_dca("UPRO-leg", "UPRO", spy, upro, upro_cfg, cap_upro, signal_source=spy)
+
+    common      = bh_res.nav.index \
+                    .intersection(sso_res.nav.index) \
+                    .intersection(upro_res.nav.index)
+
+    combo_nav   = (
+        bh_res.nav.loc[common]
+        + sso_res.nav.loc[common]
+        + upro_res.nav.loc[common]
+    ).rename("Combo SPY 60/30/10")
+
+    combo_sig   = (
+        (sso_res.signals.loc[common] + upro_res.signals.loc[common]) > 0
+    ).astype(int)
+
+    all_trades  = sorted(
+        sso_res.trades + upro_res.trades,
+        key=lambda t: t.date
+    )
+
+    return StrategyResult(
+        name="Combo SPY 60/30/10",
         nav=combo_nav,
         signals=combo_sig,
         trades=all_trades,

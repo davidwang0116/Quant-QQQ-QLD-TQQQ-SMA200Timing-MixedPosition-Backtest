@@ -5,11 +5,20 @@ All data is stored locally as Parquet files to avoid re-downloading.
 
 from __future__ import annotations
 import logging
+import os
 from pathlib import Path
 from datetime import datetime, timedelta
 
+# ── Workaround: Yahoo Finance blocks curl_cffi TLS in some regions (e.g. China) ──
+# Plain `requests` + consent cookie works reliably; disable curl_cffi BEFORE import.
+os.environ.setdefault("YF_DISABLE_CURL_CFFI", "1")
+
 import pandas as pd
 import yfinance as yf
+
+# Seed the Yahoo consent cookie so it doesn't redirect to the consent page.
+_yf_data = yf.data.YfData()
+_yf_data._session.cookies.set("consent", "yes", domain=".yahoo.com", path="/")
 
 logger = logging.getLogger(__name__)
 
