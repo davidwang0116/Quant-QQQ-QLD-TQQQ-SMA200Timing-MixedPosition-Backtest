@@ -62,7 +62,8 @@ def synthesize_leveraged(
     daily_cost = (1 + annual_cost) ** (1 / 252) - 1
     ret = qqq.pct_change().fillna(0)
     lev_ret = ret * leverage - daily_cost
-    return (1 + lev_ret).cumprod() * 100
+    prices: pd.Series = (1 + lev_ret).cumprod() * 100
+    return prices
 
 
 def synthesize_tqqq(qqq: pd.Series, annual_cost: float = 0.06) -> pd.Series:

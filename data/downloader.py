@@ -55,7 +55,8 @@ def fetch_prices(
     raw.index = pd.to_datetime(raw.index)
     raw.to_parquet(cache)
     logger.info(f"[cache] {ticker} saved → {cache}  ({len(raw)} rows)")
-    return raw[column].loc[start:end]
+    prices: pd.Series = raw[column].loc[start:end]
+    return prices
 
 
 def clear_cache(ticker: str | None = None) -> None:

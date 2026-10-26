@@ -228,7 +228,8 @@ def _annual_returns(series: pd.Series) -> dict[int, float]:
     prev = series.resample("YE").last().shift(1)
     prev.iloc[0] = series.iloc[0]
     ret = ((yearly / prev) - 1) * 100
-    return {d.year: round(float(v), 1) for d, v in ret.items()}
+    years = pd.DatetimeIndex(ret.index).year
+    return {int(y): round(float(v), 1) for y, v in zip(years, ret.to_numpy(), strict=True)}
 
 
 # ─────────────────────────────────────────────

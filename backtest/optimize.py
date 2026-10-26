@@ -173,11 +173,11 @@ def _plot_heatmap(df: pd.DataFrame, title: str, tranches: int, tag: str) -> None
         spine.set_color("#30363d")
 
     # Annotate best cell
-    best_idx = df["total_ret"].idxmax()
-    best_buy = df.loc[best_idx, "buy"]
-    best_sell = df.loc[best_idx, "sell"]
-    col_idx = list(pivot.columns).index(best_buy)
-    row_idx = list(pivot.index).index(best_sell)
+    best_row = df.sort_values("total_ret", ascending=False, kind="stable").iloc[0]
+    best_buy = float(best_row["buy"])
+    best_sell = float(best_row["sell"])
+    col_idx = [float(c) for c in pivot.columns].index(best_buy)
+    row_idx = [float(r) for r in pivot.index].index(best_sell)
     ax.plot(col_idx, row_idx, "w*", markersize=14, label=f"Best: buy={best_buy} sell={best_sell}")
     ax.legend(facecolor="#161b22", edgecolor="#30363d", labelcolor="white", fontsize=9)
 
