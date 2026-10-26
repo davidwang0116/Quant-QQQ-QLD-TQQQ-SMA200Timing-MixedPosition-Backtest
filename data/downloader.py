@@ -4,9 +4,10 @@ All data is stored locally as Parquet files to avoid re-downloading.
 """
 
 from __future__ import annotations
+
 import logging
-from pathlib import Path
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import pandas as pd
 import yfinance as yf
@@ -23,16 +24,16 @@ def _cache_path(ticker: str) -> Path:
 
 def fetch_prices(
     ticker: str,
-    start:         str  = "1993-01-01",
-    end:           str | None = None,
-    column:        str  = "Close",
+    start: str = "1993-01-01",
+    end: str | None = None,
+    column: str = "Close",
     force_refresh: bool = False,
 ) -> pd.Series:
     """
     Return a daily adjusted-close price Series for `ticker`.
     Data is cached as Parquet; refreshed if >20 hours old or force_refresh=True.
     """
-    end   = end or datetime.today().strftime("%Y-%m-%d")
+    end = end or datetime.today().strftime("%Y-%m-%d")
     cache = _cache_path(ticker)
 
     if cache.exists() and not force_refresh:
@@ -54,7 +55,8 @@ def fetch_prices(
     raw.index = pd.to_datetime(raw.index)
     raw.to_parquet(cache)
     logger.info(f"[cache] {ticker} saved → {cache}  ({len(raw)} rows)")
-    return raw[column].loc[start:end]
+    prices: pd.Series = raw[column].loc[start:end]
+    return prices
 
 
 def clear_cache(ticker: str | None = None) -> None:
