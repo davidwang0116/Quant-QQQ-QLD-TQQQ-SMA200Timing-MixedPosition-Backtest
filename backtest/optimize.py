@@ -156,7 +156,7 @@ def _plot_heatmap(df: pd.DataFrame, title: str, tranches: int, tag: str) -> None
     fig, ax = plt.subplots(figsize=(12, 8), facecolor="#0d1117")
     ax.set_facecolor("#0d1117")
 
-    im = ax.imshow(pivot.values, aspect="auto", cmap="RdYlGn", interpolation="nearest")
+    im = ax.imshow(pivot.to_numpy(), aspect="auto", cmap="RdYlGn", interpolation="nearest")
     plt.colorbar(im, ax=ax, label="Total Return (%)")
 
     ax.set_xticks(range(len(pivot.columns)))

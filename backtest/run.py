@@ -273,7 +273,7 @@ def _plot_nav_comparison(results: list[StrategyResult]) -> None:
         color = STRATEGY_COLORS.get(r.name, "#ffffff")
         lw = 2.0 if r.name != "BuyHold QQQ" else 1.2
         ls = "--" if r.name == "BuyHold QQQ" else "-"
-        ax.semilogy(r.nav.index, r.nav.values, color=color, lw=lw, ls=ls, label=r.name)
+        ax.semilogy(r.nav.index, r.nav.to_numpy(), color=color, lw=lw, ls=ls, label=r.name)
 
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"${x:,.0f}"))
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
@@ -293,7 +293,7 @@ def _plot_drawdowns(results: list[StrategyResult]) -> None:
         dd = (r.nav / r.nav.cummax() - 1) * 100
         color = STRATEGY_COLORS.get(r.name, "#ffffff")
         lw = 1.5 if r.name != "BuyHold QQQ" else 1.0
-        ax.plot(dd.index, dd.values, color=color, lw=lw, label=r.name)
+        ax.plot(dd.index, dd.to_numpy(), color=color, lw=lw, label=r.name)
 
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{x:.0f}%"))
