@@ -4,31 +4,34 @@ Run: pytest tests/ -v
 """
 
 from __future__ import annotations
-import pytest
-import pandas as pd
-import numpy as np
+
 import sys
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from strategies.engine import (
-    StrategyConfig, StrategyResult,
-    synthesize_tqqq, synthesize_qld,
+    StrategyConfig,
     strategy_buyhold_qqq,
-    strategy_timing_qqq,
-    strategy_timing_qld,
-    strategy_timing_tqqq,
     strategy_combo,
+    strategy_timing_qld,
+    strategy_timing_qqq,
+    strategy_timing_tqqq,
+    synthesize_qld,
+    synthesize_tqqq,
 )
-
 
 # ─────────────────────────────────────────────
 #  Fixtures
 # ─────────────────────────────────────────────
 
+
 def _make_prices(n=400, base=350.0, seed=42) -> pd.Series:
-    rng    = np.random.default_rng(seed)
-    daily  = rng.normal(0.0005, 0.012, size=n)
+    rng = np.random.default_rng(seed)
+    daily = rng.normal(0.0005, 0.012, size=n)
     prices = base * np.exp(np.cumsum(daily))
     return pd.Series(prices, index=pd.bdate_range("2015-01-01", periods=n))
 
@@ -36,22 +39,34 @@ def _make_prices(n=400, base=350.0, seed=42) -> pd.Series:
 @pytest.fixture
 def cfg():
     return StrategyConfig(
-        buy_threshold=1.04, sell_threshold=0.97, ma_period=20,
-        dip_threshold=-0.01, max_tranches=5, initial_capital=100_000.0,
+        buy_threshold=1.04,
+        sell_threshold=0.97,
+        ma_period=20,
+        dip_threshold=-0.01,
+        max_tranches=5,
+        initial_capital=100_000.0,
     )
 
 
 @pytest.fixture
-def qqq():  return _make_prices(seed=1)
+def qqq():
+    return _make_prices(seed=1)
+
+
 @pytest.fixture
-def qld():  return _make_prices(base=50.0, seed=2)
+def qld():
+    return _make_prices(base=50.0, seed=2)
+
+
 @pytest.fixture
-def tqqq(): return _make_prices(base=30.0, seed=3)
+def tqqq():
+    return _make_prices(base=30.0, seed=3)
 
 
 # ─────────────────────────────────────────────
 #  Synthesis tests
 # ─────────────────────────────────────────────
+
 
 class TestSynthesis:
     def test_tqqq_starts_at_100(self, qqq):
@@ -64,7 +79,7 @@ class TestSynthesis:
 
     def test_tqqq_more_volatile_than_qld(self, qqq):
         tqqq = synthesize_tqqq(qqq)
-        qld  = synthesize_qld(qqq)
+        qld = synthesize_qld(qqq)
         assert tqqq.pct_change().std() > qld.pct_change().std()
 
     def test_no_nan_in_synthesis(self, qqq):
@@ -75,6 +90,7 @@ class TestSynthesis:
 # ─────────────────────────────────────────────
 #  Strategy 1: BuyHold QQQ
 # ─────────────────────────────────────────────
+
 
 class TestBuyHoldQQQ:
     def test_initial_value(self, qqq, cfg):
@@ -90,7 +106,7 @@ class TestBuyHoldQQQ:
         assert len(r.trades) == 0
 
     def test_nav_tracks_qqq(self, qqq, cfg):
-        r     = strategy_buyhold_qqq(qqq, cfg)
+        r = strategy_buyhold_qqq(qqq, cfg)
         ratio = r.nav.iloc[-1] / r.nav.iloc[0]
         qqq_ratio = qqq.iloc[-1] / qqq.iloc[0]
         assert ratio == pytest.approx(qqq_ratio, rel=0.01)
@@ -99,6 +115,7 @@ class TestBuyHoldQQQ:
 # ─────────────────────────────────────────────
 #  Strategy 2-4: Timing DCA
 # ─────────────────────────────────────────────
+
 
 class TestTimingStrategies:
     def test_no_negative_nav(self, qqq, qld, tqqq, cfg):
@@ -148,6 +165,7 @@ class TestTimingStrategies:
 #  Strategy 5: Combo
 # ─────────────────────────────────────────────
 
+
 class TestCombo:
     def test_initial_value(self, qqq, qld, tqqq, cfg):
         r = strategy_combo(qqq, qld, tqqq, cfg)
@@ -165,12 +183,21 @@ class TestCombo:
 #  Metrics
 # ─────────────────────────────────────────────
 
+
 class TestMetrics:
     def test_summary_keys(self, qqq, cfg):
-        r   = strategy_buyhold_qqq(qqq, cfg)
-        s   = r.summary()
-        expected = {"name","final_value","total_ret_pct","cagr_pct",
-                    "max_dd_pct","sharpe","total_trades","time_in_market_pct"}
+        r = strategy_buyhold_qqq(qqq, cfg)
+        s = r.summary()
+        expected = {
+            "name",
+            "final_value",
+            "total_ret_pct",
+            "cagr_pct",
+            "max_dd_pct",
+            "sharpe",
+            "total_trades",
+            "time_in_market_pct",
+        }
         assert expected.issubset(s.keys())
 
     def test_max_drawdown_non_positive(self, qqq, cfg):

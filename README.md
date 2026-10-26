@@ -212,9 +212,11 @@ Quant-QQQ-QLD-TQQQ-SMA200Timing-MixedPosition-Backtest/
 │
 ├── .github/
 │   └── workflows/
-│       └── ci.yml                # Lint → Test → Weekly backtest
+│       ├── ci.yml                # Lint → Type check → Test (push / PR)
+│       └── weekly-backtest.yml   # Weekly data refresh + report commit (schedule / manual)
 │
 ├── requirements.txt
+├── requirements-dev.txt          # Pinned ruff / mypy versions for CI
 ├── pyproject.toml                # ruff + mypy + pytest config
 ├── .gitignore
 └── README.md
